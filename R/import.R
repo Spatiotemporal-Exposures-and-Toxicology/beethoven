@@ -96,8 +96,25 @@ import_geos <-
           )
         )
         #### define variable time
-        terra::time(data_variable) <- as.Date.POSIXlt(
-          
+        terra::time(data_variable) <- rep(
+          ISOdate(
+            year = substr(date, 1, 4),
+            month = substr(date, 5, 6),
+            day = substr(date, 7, 8),
+            hour = substr(
+              time_sequence[t],
+              1,
+              2
+            ),
+            min = substr(
+              time_sequence[t],
+              3,
+              4
+            ),
+            sec = 00,
+            tz = "UTC"
+          ),
+        terra::nlyr(data_variable)
         )
         #### define variable name based on date and time
         names(data_variable) <- paste0(

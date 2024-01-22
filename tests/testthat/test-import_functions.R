@@ -23,7 +23,7 @@ testthat::test_that("import_geos returns expected.", {
           daily = daily[d],
           daily_fun = "mean",
           directory_with_data =
-            paste0("../covariate_development/data/geos/",
+            paste0("NEEDS_RELATIVE_PATH_WITH_TEST_DATA",
                    collection)
         )
       # expect output is SpatRaster
@@ -42,10 +42,17 @@ testthat::test_that("import_geos returns expected.", {
       expect_false(
         any(c(0, 1) %in% dim(geos)[1:2])
       )
+      # expect non-numeric and non-empty time
+      expect_false(
+        any(c("", 0) %in% terra::time(geos))
+      )
       # expect time dimension according to levels and daily
       if (daily[d] == TRUE) {
         expect_true(
           "Date" %in% class(terra::time(geos))
+        )
+        expect_true(
+          "days" %in% terra::timeInfo(geos)
         )
         if (collection == "aqc_tavg_1hr_g1440x721_v1") {
           expect_true(
@@ -59,6 +66,9 @@ testthat::test_that("import_geos returns expected.", {
       } else {
         expect_true(
           "POSIXt" %in% class(terra::time(geos))
+        )
+        expect_true(
+          "seconds" %in% terra::timeInfo(geos)
         )
         if (collection == "aqc_tavg_1hr_g1440x721_v1") {
           expect_true(

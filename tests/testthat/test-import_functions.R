@@ -22,9 +22,10 @@ testthat::test_that("import_geos returns expected.", {
           variable = "O3",
           daily = daily[d],
           daily_fun = "mean",
-          directory_with_data =
-            paste0("NEEDS_RELATIVE_PATH_WITH_TEST_DATA",
-                   collection)
+          directory_with_data = paste0(
+            "../testdata/geos/",
+            collection
+          )
         )
       # expect output is SpatRaster
       expect_true(

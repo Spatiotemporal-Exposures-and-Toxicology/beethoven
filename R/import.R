@@ -20,36 +20,30 @@
 #' @importFrom terra time
 #' @importFrom terra varnames
 #' @importFrom terra crs
-#' @importFrom terra has.time
+#' @importFrom terra timeInfo
 #' @importFrom terra hasValues
 #' @importFrom terra subset
 #' @export
 import_geos <-
-  function(
-      date_start = "2023-09-01",
-      date_end = "2023-09-01",
-      collection =
-        c(
-          "htf_inst_15mn_g1440x721_x1", "aqc_tavg_1hr_g1440x721_v1",
-          "chm_tavg_1hr_g1440x721_v1", "met_tavg_1hr_g1440x721_x1",
-          "xgc_tavg_1hr_g1440x721_x1", "chm_inst_1hr_g1440x721_p23",
-          "met_inst_1hr_g1440x721_p23"
-        ),
-      variable = NULL,
-      daily = TRUE,
-      daily_fun = "mean",
-      directory_with_data = "../../data/covariates/geos_cf/") {
+  function(date_start = "2023-09-01",
+           date_end = "2023-09-01",
+           collection =
+             c(
+               "htf_inst_15mn_g1440x721_x1", "aqc_tavg_1hr_g1440x721_v1",
+               "chm_tavg_1hr_g1440x721_v1", "met_tavg_1hr_g1440x721_x1",
+               "xgc_tavg_1hr_g1440x721_x1", "chm_inst_1hr_g1440x721_p23",
+               "met_inst_1hr_g1440x721_p23"
+             ),
+           variable = NULL,
+           daily = TRUE,
+           daily_fun = "mean",
+           directory_with_data = "../../data/covariates/geos_cf/") {
     #### directory setup
     directory_with_data <- download_sanitize_path(directory_with_data)
     #### check for variable
     check_for_null_parameters(mget(ls()))
     #### match user collection
     collection <- match.arg(collection)
-    cat(paste0(
-      "Collection ",
-      collection,
-      " identified...\n"
-    ))
     #### define date sequence
     date_sequence <- generate_date_sequence(
       date_start,
@@ -70,9 +64,9 @@ import_geos <-
       date <- date_sequence[d]
       data_date <- terra::rast()
       cat(paste0(
-        "Working on date ",
+        "Cleaning data for date ",
         date,
-        "\n"
+        "...\n"
       ))
       for (t in seq_along(time_sequence)) {
         #### define path to hourly data
@@ -86,8 +80,9 @@ import_geos <-
           time_sequence[t],
           "z.nc4"
         )
-        #### import .nc4 data with selected variables
+        #### import .nc4 data
         data_raw <- terra::rast(path)
+        #### subset to user-selected variable
         data_variable <- terra::subset(
           data_raw,
           subset = grep(
@@ -114,7 +109,7 @@ import_geos <-
             sec = 00,
             tz = "UTC"
           ),
-        terra::nlyr(data_variable)
+          terra::nlyr(data_variable)
         )
         #### define variable name based on date and time
         names(data_variable) <- paste0(
@@ -124,11 +119,11 @@ import_geos <-
             ":", "",
             gsub(
               "-", "",
-              gsub(" ", "_", time(data_variable))
+              gsub(" ", "_", terra::time(data_variable))
             )
           )
         )
-        if (t == 1) {
+        if (t == 1 && collection_end == "3") {
           names(data_variable) <- paste0(
             names(data_variable),
             "_",
@@ -145,11 +140,11 @@ import_geos <-
       }
       if (daily == TRUE) {
         cat(paste0(
-          "Calculating daily ",
+          "Returning daily ",
           daily_fun,
           " for date ",
           date,
-          "\n"
+          ".\n"
         ))
         if (collection_end == "1") {
           #### summarize by day
@@ -201,7 +196,7 @@ import_geos <-
           )
           data_fun <- terra::rast()
           for (l in seq_along(levels_unique)) {
-            #### subset to single pressure level 
+            #### subset to single pressure level
             data_level <- terra::subset(
               data_date,
               subset = grep(
@@ -243,11 +238,11 @@ import_geos <-
             )
           }
         }
-      } else {
+      } else if (daily == FALSE) {
         cat(paste0(
           "Returning hourly data for date ",
           date,
-          "\n"
+          ".\n"
         ))
         #### set coordinate reference system
         terra::crs(data_date) <- "EPSG:4326"

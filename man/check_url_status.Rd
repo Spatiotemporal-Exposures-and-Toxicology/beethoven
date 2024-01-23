@@ -4,12 +4,12 @@
 \alias{check_url_status}
 \title{Check if sample of download URLs have HTTP Status 200}
 \usage{
-check_url_status(url, method = "HEAD")
+check_url_status(url, method = c("HEAD", "GET"))
 }
 \arguments{
 \item{url}{Download URL to be checked.}
 
-\item{method}{httr method to obtain URL ("HEAD" or "GET")}
+\item{method}{httr method to obtain URL (\verb{"HEAD"`` or }"GET"`)}
 }
 \value{
 logical object
@@ -19,5 +19,4 @@ Check if sample of download URLs have HTTP Status 200
 }
 \author{
 Insang Song; Mitchell Manware
-based on comment #164 Location of download functions
 }

@@ -96,8 +96,9 @@ input/nlcd
 input/tri
 input/NCEP-NCAR-Reanalysis-1
 
-# geos test data
+# large test data
 tests/testdata/geos/
 tests/testdata/narr/
+tests/testdata/sites_sample.RDS
 
 input/nei

@@ -1,5 +1,5 @@
 #' @description
-#' Import and clean NOAA NCEP North America Regional Reanalysis (NARR) data
+#' Import and clean NOAA NCEP North American Regional Reanalysis (NARR) data
 #' downloaded with `download_narr` or `download_data(dataset_name = "NARR")`.
 #' Function returns a SpatRast object containing the user-defined variable
 #' of interest. Layer names indicate the variable, pressure level, and date
@@ -17,22 +17,11 @@ import_narr <- function(
     date_start = "2023-09-01",
     date_end = "2023-09-01",
     variable = NULL,
-    directory_with_data = "../../data/covariates/narr/"
-) {
+    directory_with_data = "../../data/covariates/narr/") {
   #### directory setup
   directory_with_data <- download_sanitize_path(directory_with_data)
   #### check for variable
   check_for_null_parameters(mget(ls()))
-  #### extract year start and year end
-  year_sequence <- seq(
-    as.integer(
-      substr(date_start, 1, 4)
-    ),
-    as.integer(
-      substr(date_end, 1, 4)
-    ),
-    by = 1
-  )
   #### identify file paths
   data_paths <- list.files(
     directory_with_data,
@@ -73,21 +62,19 @@ import_narr <- function(
       names(data_year) <- paste0(
         variable,
         "_",
-        sapply(strsplit(
-          names(data_year),
-          "_"
+        sapply(
+          strsplit(
+            names(data_year),
+            "_"
           ),
-          function(x) x[2]),
+          function(x) x[2]
+        ),
         "_",
         gsub(
           "-",
           "",
           terra::time(data_year)
         )
-      )
-      which_base <- paste0(
-        variable,
-        "_level=^"
       )
     } else {
       #### mono level data
@@ -99,10 +86,6 @@ import_narr <- function(
           "",
           terra::time(data_year)
         )
-      )
-      which_base <- paste0(
-        variable,
-        "_"
       )
     }
     data_full <- c(
@@ -165,12 +148,12 @@ import_geos <-
   function(date_start = "2023-09-01",
            date_end = "2023-09-01",
            collection =
-             c(
-               "htf_inst_15mn_g1440x721_x1", "aqc_tavg_1hr_g1440x721_v1",
-               "chm_tavg_1hr_g1440x721_v1", "met_tavg_1hr_g1440x721_x1",
-               "xgc_tavg_1hr_g1440x721_x1", "chm_inst_1hr_g1440x721_p23",
-               "met_inst_1hr_g1440x721_p23"
-             ),
+           c(
+             "htf_inst_15mn_g1440x721_x1", "aqc_tavg_1hr_g1440x721_v1",
+             "chm_tavg_1hr_g1440x721_v1", "met_tavg_1hr_g1440x721_x1",
+             "xgc_tavg_1hr_g1440x721_x1", "chm_inst_1hr_g1440x721_p23",
+             "met_inst_1hr_g1440x721_p23"
+           ),
            variable = NULL,
            daily = TRUE,
            daily_fun = "mean",
@@ -279,7 +262,9 @@ import_geos <-
         cat(paste0(
           "Returning daily ",
           daily_fun,
-          " for date ",
+          " ",
+          variable,
+          " data for date ",
           date,
           ".\n"
         ))
@@ -377,7 +362,9 @@ import_geos <-
         }
       } else if (daily == FALSE) {
         cat(paste0(
-          "Returning hourly data for date ",
+          "Returning hourly ",
+          variable,
+          " data for date ",
           date,
           ".\n"
         ))

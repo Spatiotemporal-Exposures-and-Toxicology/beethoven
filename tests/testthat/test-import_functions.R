@@ -18,7 +18,7 @@ testthat::test_that("import_narr returns expected.", {
         variable = variables[v],
         directory_with_data = 
           paste0(
-            "../tests/testdata/narr/",
+            "../testdata/narr/",
             variables[v]
           )
       )

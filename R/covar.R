@@ -1,4 +1,141 @@
 #' @description
+#' Extract NOAA NCEP North American Regional Reanalysis (NARR) data at point 
+#' locations using SpatRaster object from `import_narr`. Function returns a data
+#' frame containing GEOS-CF variable values at user-defined sites. Unique column
+#' names reflect variable name, circular buffer, and vertical pressure level 
+#' (if applicable).
+#' @param data SpatRaster(1). Cleaned SpatRaster object that has been returned
+#' from `import_narr` containing NOAA NCEP North American Regional Reanalysis
+#' variable data.
+#' @param sites data.frame, characater to file path, SpatVector, or sf object.
+#' @param identifier character(1). Column within `locations` CSV file
+#' containing identifier for each unique coordinate location.
+#' @param buffer integer(1). Circular buffer distance around site locations.
+#' (Default = 0).
+#' @param fun character(1). Function used to summarize multiple raster cells
+#' within sites location buffer (Default = `mean`).
+#' @author Mitchell Manware
+#' @return a data.frame object;
+#' @importFrom terra vect
+#' @importFrom terra as.data.frame
+#' @importFrom terra time
+#' @importFrom terra extract
+#' @importFrom terra nlyr
+#' @export
+covar_narr <- function(
+    data,
+    sites,
+    identifier = NULL,
+    buffer = 0,
+    fun = "mean"
+) {
+  #### check for null parameters
+  check_for_null_parameters(mget(ls()))
+  #### location SpatVector
+  sites_v <- terra::vect(
+    sites,
+    geom = c("lon", "lat"),
+    crs = "EPSG:4326"
+  )
+  #### project to NARR-specific coordinate reference system
+  sites_p <- terra::project(
+    sites_v,
+    terra::crs(data)
+  )
+  #### site identifiers
+  sites_id <- terra::as.data.frame(sites_p)
+  #### buffer
+  sites_e <- sites_buffer(
+    sites = sites_p,
+    buffer = buffer
+  )
+  #### empty location data.frame
+  sites_extracted <- NULL
+  for (l in seq_len(terra::nlyr(data))) {
+    #### select data layer
+    data_layer <- data[[l]]
+    #### extract layer names for variable, date, and pressure level
+    data_name <- strsplit(
+      names(data_layer),
+      "_"
+    )[[1]]
+    #### monolevel data
+    if (length(data_name) == 2) {
+      layer_level <- "monolevel"
+      layer_date <- as.Date(
+        data_name[2],
+        format = "%Y%m%d"
+      )
+      cat(paste0(
+        "Calculating daily ",
+        data_name[1],
+        " covariates at ",
+        layer_level,
+        " for date ",
+        layer_date,
+        "...\n"
+      ))
+    } else if (length(data_name) == 3) {
+      layer_level <- data_name[2]
+      layer_date <- as.Date(
+        data_name[3],
+        format = "%Y%m%d"
+      )
+      cat(paste0(
+        "Calculating daily ",
+        data_name[1],
+        " covariates at ",
+        layer_level,
+        " for date ",
+        layer_date,
+        "...\n"
+      ))
+    }
+    #### extract layer data at sites
+    sites_extracted_layer <- terra::extract(
+      data_layer,
+      sites_e,
+      fun = fun,
+      method = "simple",
+      ID = FALSE,
+      bind = FALSE
+    )
+    #### merge with site_id, datetime, pressure level
+    sites_extracted_layer <- cbind(
+      sites_id,
+      layer_date,
+      layer_level,
+      sites_extracted_layer
+    )
+    #### define column names
+    colnames(sites_extracted_layer) <- c(
+      identifier,
+      "date",
+      "level",
+      paste0(
+        data_name[1],
+        "_",
+        buffer
+      )
+    )
+    #### merge with empty sites_extracted
+    sites_extracted <- rbind(
+      sites_extracted,
+      sites_extracted_layer
+    )
+    if (l == terra::nlyr(data)) {
+      cat(paste0(
+        "Returning ",
+        data_name[1],
+        " covariates.\n"
+      ))
+    }
+  }
+  #### return data.frame
+  return(sites_extracted)
+}
+
+#' @description
 #' Extract GEOS-CF data at point locations using SpatRaster object from
 #' `import_geos`. Function returns a data frame containing GEOS-CF variable
 #' values at user-defined sites. Unique column names reflect variable name,
@@ -9,7 +146,6 @@
 #' @param sites data.frame, characater to file path, SpatVector, or sf object.
 #' @param identifier character(1). Column within `locations` CSV file
 #' containing identifier for each unique coordinate location.
-#' @param crs integer(1). EPSG code for desired coordinate reference system.
 #' @param buffer integer(1). Circular buffer distance around site locations.
 #' (Default = 0).
 #' @param fun character(1). Function used to summarize multiple raster cells
@@ -27,37 +163,23 @@ covar_geos <- function(
     data,
     sites,
     identifier = NULL,
-    crs = 4326,
     buffer = 0,
-    fun = "mean"
-    ) {
+    fun = "mean") {
   #### check for null parameters
   check_for_null_parameters(mget(ls()))
   #### location SpatVector
   sites_v <- terra::vect(
     sites,
     geom = c("lon", "lat"),
-    crs = paste0(
-      "EPSG:",
-      crs
-    )
+    crs = "EPSG:4326"
   )
   #### site identifiers
   sites_id <- terra::as.data.frame(sites_v)
   #### buffer
-  cat(paste0(
-    "Utilizing ",
-    buffer,
-    " meter buffer for covariate calculations.\n"
-  ))
-  if (buffer == 0) {
-    sites_e <- sites_v
-  } else {
-    sites_e <- terra::buffer(
-      sites_v,
-      buffer
-    )
-  }
+  sites_e <- sites_buffer(
+    sites = sites_v,
+    buffer = buffer
+  )
   #### empty location data.frame
   sites_extracted <- NULL
   for (l in seq_len(terra::nlyr(data))) {
@@ -77,24 +199,28 @@ covar_geos <- function(
         format = "%Y%m%d"
       )
       layer_level <- "monolevel"
-      cat(paste0("Calculating daily ",
-                 data_name[1],
-                 " covariates for date ",
-                 data_name[2],
-                 "...\n"))
+      cat(paste0(
+        "Calculating daily ",
+        data_name[1],
+        " covariates for date ",
+        layer_datetime,
+        "...\n"
+      ))
     } else if (length(data_name) == 3) {
       layer_datetime <- as.Date(
         data_name[3],
         format = "%Y%m%d"
       )
       layer_level <- data_name[2]
-      cat(paste0("Calculating daily ",
-                 data_name[1],
-                 " covariates at ",
-                 layer_level,
-                 " for date ",
-                 data_name[3],
-                 "...\n"))
+      cat(paste0(
+        "Calculating daily ",
+        data_name[1],
+        " covariates at ",
+        layer_level,
+        " for date ",
+        layer_datetime,
+        "...\n"
+      ))
     } else if (length(data_name) == 4) {
       layer_datetime <- ISOdate(
         year = substr(data_name[3], 1, 4),
@@ -106,15 +232,15 @@ covar_geos <- function(
         tz = "UTC"
       )
       layer_level <- data_name[2]
-      cat(paste0("Calculating hourly ",
-                 data_name[1],
-                 " covariates at ",
-                 layer_level,
-                 " for date ",
-                 data_name[3],
-                 " hour ",
-                 data_name[4],
-                 "...\n"))
+      cat(paste0(
+        "Calculating hourly ",
+        data_name[1],
+        " covariates at ",
+        layer_level,
+        " for date ",
+        layer_datetime,
+        "...\n"
+      ))
     }
     #### extract layer data at sites
     sites_extracted_layer <- terra::extract(
@@ -156,5 +282,6 @@ covar_geos <- function(
       ))
     }
   }
+  #### return data.frame
   return(sites_extracted)
 }

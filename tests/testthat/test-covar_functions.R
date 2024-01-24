@@ -1,6 +1,6 @@
 # Tests for covariate generation functions
 
-testthat::test_that("covar_geos with hourly data.", {
+testthat::test_that("covar_geos returns as expected.", {
   withr::local_package("terra")
   collections <- c(
     "aqc_tavg_1hr_g1440x721_v1",

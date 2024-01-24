@@ -98,5 +98,6 @@ input/NCEP-NCAR-Reanalysis-1
 
 # geos test data
 tests/testdata/geos/
+tests/testdata/narr/
 
 input/nei

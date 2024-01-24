@@ -1,5 +1,142 @@
 #' @description
-#' Import and clean data GEOS-CF data downloaded with
+#' Import and clean NOAA NCEP North America Regional Reanalysis (NARR) data
+#' downloaded with `download_narr` or `download_data(dataset_name = "NARR")`.
+#' Function returns a SpatRast object containing the user-defined variable
+#' of interest. Layer names indicate the variable, pressure level, and date
+#' (YYYYMMDD).
+#' @param date_start character(1). length of 10. Format "YYYY-MM-DD".
+#' @param date_end character(1). length of 10. Format "YYYY-MM-DD".
+#' @param variable character(1). NARR variable name(s).
+#' @param directory_with_data character(1). Directory with downloaded GEOS-CF
+#' netCDF files.
+#' @author Mitchell Manware
+#' @return a SpatRaster object
+#' @importFrom terra rast
+#' @export
+import_narr <- function(
+    date_start = "2023-09-01",
+    date_end = "2023-09-01",
+    variable = NULL,
+    directory_with_data = "../../data/covariates/narr/"
+) {
+  #### directory setup
+  directory_with_data <- download_sanitize_path(directory_with_data)
+  #### check for variable
+  check_for_null_parameters(mget(ls()))
+  #### extract year start and year end
+  year_sequence <- seq(
+    as.integer(
+      substr(date_start, 1, 4)
+    ),
+    as.integer(
+      substr(date_end, 1, 4)
+    ),
+    by = 1
+  )
+  #### identify file paths
+  data_paths <- list.files(
+    directory_with_data,
+    pattern = variable,
+    full.names = TRUE
+  )
+  data_paths <- data_paths[grep(
+    ".nc",
+    data_paths
+  )]
+  #### define date sequence
+  date_sequence <- generate_date_sequence(
+    date_start,
+    date_end,
+    sub_hyphen = TRUE
+  )
+  #### initiate for loop
+  data_full <- terra::rast()
+  for (p in seq_along(data_paths)) {
+    #### import data
+    data_year <- terra::rast(data_paths[p])
+    cat(paste0(
+      "Cleaning data for year ",
+      substr(
+        gsub(
+          "-",
+          "",
+          terra::time(data_year)[1]
+        ),
+        1,
+        4
+      ),
+      "...\n"
+    ))
+    #### check for mono or pressure levels
+    if (grepl("level", names(data_year)[1])) {
+      #### pressure levels data
+      names(data_year) <- paste0(
+        variable,
+        "_",
+        sapply(strsplit(
+          names(data_year),
+          "_"
+          ),
+          function(x) x[2]),
+        "_",
+        gsub(
+          "-",
+          "",
+          terra::time(data_year)
+        )
+      )
+      which_base <- paste0(
+        variable,
+        "_level=^"
+      )
+    } else {
+      #### mono level data
+      names(data_year) <- paste0(
+        variable,
+        "_",
+        gsub(
+          "-",
+          "",
+          terra::time(data_year)
+        )
+      )
+      which_base <- paste0(
+        variable,
+        "_"
+      )
+    }
+    data_full <- c(
+      data_full,
+      data_year,
+      warn = FALSE
+    )
+  }
+  #### subset years to dates of interest
+  data_return <- terra::subset(
+    data_full,
+    which(
+      substr(
+        names(data_full),
+        nchar(names(data_full)) - 7,
+        nchar(names(data_full))
+      ) %in% date_sequence
+    )
+  )
+  cat(paste0(
+    "Returning daily ",
+    variable,
+    " data from ",
+    date_sequence[1],
+    " to ",
+    date_sequence[length(date_sequence)],
+    ".\n"
+  ))
+  #### return SpatRaster
+  return(data_return)
+}
+
+#' @description
+#' Import and clean GEOS-CF data downloaded with
 #' `download_geos_cf_data` or `download_data(dataset_name = "geos")`. Function
 #' returns a SpatRast object containing the user-defined variables of interest.
 #' Layer names indicate the variable, pressure level, date (YYYYMMDD), and, if

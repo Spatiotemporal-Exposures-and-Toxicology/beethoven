@@ -91,4 +91,5 @@ sites_vector <-
       sites_p,
       buffer
     )
+    return(sites_b)
   }

@@ -7,6 +7,7 @@ testthat::test_that("covar_narr returns expected.", {
     "omega"
   )
   buffers <- c(0, 1000)
+  # use data.table
   sites <- readRDS("../testdata/sites_sample.RDS")
   # expect function
   expect_true(
@@ -62,6 +63,7 @@ testthat::test_that("covar_geos returns as expected.", {
   )
   buffers <- c(0, 1000)
   daily_sum <- c(TRUE, FALSE)
+  # use data.frame
   sites <- data.frame(readRDS("../testdata/sites_sample.RDS"))
   # expect function
   expect_true(
@@ -120,7 +122,7 @@ testthat::test_that("covar_geos returns as expected.", {
   }
 })
 
-testthat::test_that("sites_vector identifies data type and missing columns.", {
+testthat::test_that("sites_vector handles data type and missing columns.", {
   withr::local_package("terra")
   sites <- readRDS("../testdata/sites_sample.RDS")
   narr <-
@@ -147,7 +149,8 @@ testthat::test_that("sites_vector identifies data type and missing columns.", {
       data = narr,
       sites = terra::vect(
         sites,
-        geom = c("lon", "lat")
+        geom = c("lon", "lat"),
+        crs = "EPSG:4326"
       ),
       identifier = "site_id"
     )

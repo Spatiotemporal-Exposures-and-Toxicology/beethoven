@@ -37,9 +37,9 @@ covar_narr <- function(
     terra::crs(data),
     buffer
   )
-  #### site identifiers
+  #### site identifiers only
   sites_id <- subset(
-    sites,
+    terra::as.data.frame(sites_e),
     select = identifier
   )
   #### empty location data.frame

@@ -62,7 +62,7 @@ testthat::test_that("covar_geos returns as expected.", {
   )
   buffers <- c(0, 1000)
   daily_sum <- c(TRUE, FALSE)
-  sites <- readRDS("../testdata/sites_sample.RDS")
+  sites <- data.frame(readRDS("../testdata/sites_sample.RDS"))
   # expect function
   expect_true(
     is.function(covar_geos)
@@ -118,4 +118,38 @@ testthat::test_that("covar_geos returns as expected.", {
       }
     }
   }
+})
+
+testthat::test_that("sites_vector identifies data type and missing columns.", {
+  withr::local_package("terra")
+  sites <- readRDS("../testdata/sites_sample.RDS")
+  narr <-
+    import_narr(
+      date_start = "2018-01-01",
+      date_end = "2018-01-01",
+      variable = "weasd",
+      directory_with_data = "../testdata/narr/weasd/"
+    )
+  # expect error when missing `lat` or `lon`
+  expect_error(
+    covar_narr(
+      data = narr,
+      sites = subset(
+        sites,
+        select = "lon"
+      ),
+      identifier = "site_id"
+    )
+  )
+  # expect error when sites are SpatVector
+  expect_error(
+    covar_narr(
+      data = narr,
+      sites = terra::vect(
+        sites,
+        geom = c("lon", "lat")
+      ),
+      identifier = "site_id"
+    )
+  )
 })

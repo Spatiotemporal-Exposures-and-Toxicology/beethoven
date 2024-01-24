@@ -1,8 +1,8 @@
 #' @description
-#' Extract NOAA NCEP North American Regional Reanalysis (NARR) data at point 
+#' Extract NOAA NCEP North American Regional Reanalysis (NARR) data at point
 #' locations using SpatRaster object from `import_narr`. Function returns a data
 #' frame containing GEOS-CF variable values at user-defined sites. Unique column
-#' names reflect variable name, circular buffer, and vertical pressure level 
+#' names reflect variable name, circular buffer, and vertical pressure level
 #' (if applicable).
 #' @param data SpatRaster(1). Cleaned SpatRaster object that has been returned
 #' from `import_narr` containing NOAA NCEP North American Regional Reanalysis
@@ -21,33 +21,26 @@
 #' @importFrom terra time
 #' @importFrom terra extract
 #' @importFrom terra nlyr
+#' @importFrom terra crs
 #' @export
 covar_narr <- function(
     data,
     sites,
     identifier = NULL,
     buffer = 0,
-    fun = "mean"
-) {
+    fun = "mean") {
   #### check for null parameters
   check_for_null_parameters(mget(ls()))
-  #### location SpatVector
-  sites_v <- terra::vect(
+  #### prepare sites
+  sites_e <- sites_vector(
     sites,
-    geom = c("lon", "lat"),
-    crs = "EPSG:4326"
-  )
-  #### project to NARR-specific coordinate reference system
-  sites_p <- terra::project(
-    sites_v,
-    terra::crs(data)
+    terra::crs(data),
+    buffer
   )
   #### site identifiers
-  sites_id <- terra::as.data.frame(sites_p)
-  #### buffer
-  sites_e <- sites_buffer(
-    sites = sites_p,
-    buffer = buffer
+  sites_id <- subset(
+    sites,
+    select = identifier
   )
   #### empty location data.frame
   sites_extracted <- NULL
@@ -158,6 +151,7 @@ covar_narr <- function(
 #' @importFrom terra time
 #' @importFrom terra extract
 #' @importFrom terra nlyr
+#' @importFrom terra crs
 #' @export
 covar_geos <- function(
     data,
@@ -167,18 +161,16 @@ covar_geos <- function(
     fun = "mean") {
   #### check for null parameters
   check_for_null_parameters(mget(ls()))
-  #### location SpatVector
-  sites_v <- terra::vect(
+  #### prepare sites
+  sites_e <- sites_vector(
     sites,
-    geom = c("lon", "lat"),
-    crs = "EPSG:4326"
+    terra::crs(data),
+    buffer
   )
   #### site identifiers
-  sites_id <- terra::as.data.frame(sites_v)
-  #### buffer
-  sites_e <- sites_buffer(
-    sites = sites_v,
-    buffer = buffer
+  sites_id <- subset(
+    sites,
+    select = identifier
   )
   #### empty location data.frame
   sites_extracted <- NULL

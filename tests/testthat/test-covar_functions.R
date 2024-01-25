@@ -1,5 +1,62 @@
 # Tests for covariate generation functions
 
+testthat::test_that("covar_gmted returns expected.", {
+  withr::local_package("terra")
+  # statistics <- c(
+  #   "Breakline Emphasis", "Systematic Subsample",
+  #   "Median Statistic", "Minimum Statistic",
+  #   "Mean Statistic", "Maximum Statistic",
+  #   "Standard Deviation Statistic"
+  # )
+  statistics <- c(
+    "Breakline Emphasis", "Systematic Subsample"
+  )
+  resolutions <- c(
+    "7.5 arc-seconds", "15 arc-seconds", "30 arc-seconds"
+  )
+  buffers <- c(0, 1000)
+  # use data.table
+  sites <- readRDS("../testdata/sites_sample.RDS")
+  # expect function
+  expect_true(
+    is.function(covar_gmted)
+  )
+  for (s in seq_along(statistics)) {
+    statistic <- statistics[s]
+    for (r in seq_along(resolutions)) {
+      resolution <- resolutions[r]
+      for (b in seq_along(buffers)) {
+        gmted <-
+          import_gmted(
+            variable = c(statistic, resolution),
+            directory_with_data =
+            "../../../covariate_development/data/gmted"
+          )
+        gmted_covar <-
+          covar_gmted(
+            data = gmted,
+            sites = sites,
+            identifier = "site_id",
+            buffer = buffers[b],
+            fun = "mean"
+          )
+        # expect output is data.frame
+        expect_true(
+          class(gmted_covar) == "data.frame"
+        )
+        # expect 4 columns
+        expect_true(
+          ncol(gmted_covar) == 2
+        )
+        # expect numeric value
+        expect_true(
+          class(gmted_covar[, 2]) == "numeric"
+        )
+      }
+    }
+  }
+})
+
 testthat::test_that("covar_narr returns expected.", {
   withr::local_package("terra")
   variables <- c(
@@ -22,10 +79,10 @@ testthat::test_that("covar_narr returns expected.", {
           date_end = "2018-01-01",
           variable = variable,
           directory_with_data =
-            paste0(
-              "../testdata/narr/",
-              variables[v]
-            )
+          paste0(
+            "../testdata/narr/",
+            variables[v]
+          )
         )
       narr_covar <-
         covar_narr(
@@ -62,62 +119,50 @@ testthat::test_that("covar_geos returns as expected.", {
     "chm_inst_1hr_g1440x721_p23"
   )
   buffers <- c(0, 1000)
-  daily_sum <- c(TRUE, FALSE)
   # use data.frame
   sites <- data.frame(readRDS("../testdata/sites_sample.RDS"))
   # expect function
   expect_true(
     is.function(covar_geos)
   )
-  for (d in seq_along(daily_sum)) {
-    daily <- daily_sum[d]
-    for (c in seq_along(collections)) {
-      collection <- collections[c]
-      for (b in seq_along(buffers)) {
-        geos <-
-          import_geos(
-            date_start = "2018-01-01",
-            date_end = "2018-01-01",
-            collection = collection,
-            variable = "O3",
-            daily = daily,
-            daily_fun = "mean",
-            directory_with_data =
-              paste0(
-                "../testdata/geos/",
-                collection)
+  for (c in seq_along(collections)) {
+    collection <- collections[c]
+    for (b in seq_along(buffers)) {
+      geos <-
+        import_geos(
+          date_start = "2018-01-01",
+          date_end = "2018-01-01",
+          variable = "O3",
+          directory_with_data =
+          paste0(
+            "../testdata/geos/",
+            collection
           )
-        geos_covar <-
-          covar_geos(
-            data = geos,
-            sites = sites,
-            identifier = "site_id",
-            buffer = buffers[b],
-            fun = "mean"
-          )
-        # expect output is data.frame
-        expect_true(
-          class(geos_covar) == "data.frame"
         )
-        # expect 4 columns
-        expect_true(
-          ncol(geos_covar) == 4
+      geos_covar <-
+        covar_geos(
+          data = geos,
+          sites = sites,
+          identifier = "site_id",
+          buffer = buffers[b],
+          fun = "mean"
         )
-        # expect numeric value
-        expect_true(
-          class(geos_covar[, 4]) == "numeric"
-        )
-        # expect date and time column
-        if (daily == TRUE) {
-          expect_true(
-            "Date" %in% class(geos_covar$date)
-          )
-        } else if (daily == FALSE) {
-          expect_true(
-            "POSIXt" %in% class(geos_covar$date)
-          )
-        }
-      }
+      # expect output is data.frame
+      expect_true(
+        class(geos_covar) == "data.frame"
+      )
+      # expect 4 columns
+      expect_true(
+        ncol(geos_covar) == 4
+      )
+      # expect numeric value
+      expect_true(
+        class(geos_covar[, 4]) == "numeric"
+      )
+      # expect date and time column
+      expect_true(
+        "POSIXt" %in% class(geos_covar$date)
+      )
     }
   }
 })

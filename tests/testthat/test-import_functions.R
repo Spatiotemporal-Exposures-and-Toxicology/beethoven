@@ -1,5 +1,49 @@
 # Tests for data import functions
 
+testthat::test_that("import_gmted returns expected.", {
+  withr::local_package("terra")
+  # statistics <- c(
+  #   "Breakline Emphasis", "Systematic Subsample",
+  #   "Median Statistic", "Minimum Statistic",
+  #   "Mean Statistic", "Maximum Statistic",
+  #   "Standard Deviation Statistic"
+  # )
+  statistics <- c(
+    "Breakline Emphasis", "Systematic Subsample"
+  )
+  resolutions <- c(
+    "7.5 arc-seconds", "15 arc-seconds", "30 arc-seconds"
+  )
+  for (s in seq_along(statistics)) {
+    statistic <- statistics[s]
+    for (r in seq_along(resolutions)) {
+      resolution <- resolutions[r]
+      gmted <-
+        import_gmted(
+          variable = c(statistic, resolution),
+          directory_with_data =
+          "../../../covariate_development/data/gmted"
+        )
+      # expect output is a SpatRaster
+      expect_true(
+        class(gmted)[1] == "SpatRaster"
+      )
+      # expect values
+      expect_true(
+        terra::hasValues(gmted)
+      )
+      # expect non-null coordinate reference system
+      expect_false(
+        is.null(terra::crs(gmted))
+      )
+      # expect lon and lat dimensions to be > 1
+      expect_false(
+        any(c(0, 1) %in% dim(gmted)[1:2])
+      )
+    }
+  }
+})
+
 testthat::test_that("import_narr returns expected.", {
   withr::local_package("terra")
   variables <- c(
@@ -17,10 +61,10 @@ testthat::test_that("import_narr returns expected.", {
         date_end = "2018-01-01",
         variable = variables[v],
         directory_with_data =
-          paste0(
-            "../testdata/narr/",
-            variables[v]
-          )
+        paste0(
+          "../testdata/narr/",
+          variables[v]
+        )
       )
     # expect output is SpatRaster
     expect_true(
@@ -136,7 +180,7 @@ testthat::test_that("import support functions return expected.", {
   path <- list.files(
     "../testdata/geos/aqc_tavg_1hr_g1440x721_v1/",
     full.names = TRUE
-    )
+  )
   expect_error(
     geos_strsplit(
       path = path,
@@ -162,30 +206,3 @@ testthat::test_that("import support functions return expected.", {
     unique(nchar(path_split_dt)) == 12
   )
 })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -10,11 +10,10 @@
 #' @export
 geos_strsplit <-
   function(
-    path,
-    collection = FALSE,
-    date = FALSE,
-    datetime = FALSE
-  ) {
+      path,
+      collection = FALSE,
+      date = FALSE,
+      datetime = FALSE) {
     #### check for more than one true
     parameters <- c(collection, date, datetime)
     if (length(parameters[parameters == TRUE]) > 1) {
@@ -91,4 +90,41 @@ geos_strsplit <-
       )
       return(split_datetime)
     }
+  }
+
+#' Generate statistic and resolution codes based on GMTED statistic and
+#' resolution.
+#' @param string character(1). File path to GEOS-CF data file.
+#' @param statistic logical(1). Matches statistic to statistic code.
+#' @param resolution logical(1). Matches resolution to resolution code.
+#' @return character
+#' @export
+gmted_codes <-
+  function(
+      string,
+      statistic = FALSE,
+      resolution = FALSE,
+      invert = FALSE) {
+    statistics <- c(
+      "Breakline Emphasis", "Systematic Subsample",
+      "Median Statistic", "Minimum Statistic",
+      "Mean Statistic", "Maximum Statistic",
+      "Standard Deviation Statistic"
+    )
+    statistic_codes <- c("be", "ds", "md", "mi", "mn", "mx", "sd")
+    statistic_codes <- cbind(statistics, statistic_codes)
+    resolutions <- c("7.5 arc-seconds", "15 arc-seconds", "30 arc-seconds")
+    resolution_codes <- c("75", "15", "30")
+    resolution_codes <- cbind(resolutions, resolution_codes)
+    if (statistic == TRUE && invert == FALSE) {
+      code <- statistic_codes[statistic_codes[, 1] == string][2]
+    } else if (statistic == TRUE && invert == TRUE) {
+      code <- statistic_codes[statistic_codes[, 2] == string][1]
+    }
+    if (resolution == TRUE && invert == FALSE) {
+      code <- resolution_codes[resolution_codes[, 1] == string][2]
+    } else if (resolution == TRUE && invert == TRUE) {
+      code <- resolution_codes[resolution_codes[, 2] == string][1]
+    }
+    return(code)
   }

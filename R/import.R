@@ -1,4 +1,80 @@
 #' @description
+#' Import and clean Global Multi-resolution Terrain Elevation Data (GMTED2010)
+#' downloaded with `download_gmted` or `download_data(dataset_name = "gmted")`.
+#' Function returns a SpatRast object containing the user-defined variable
+#' of interest at specified resolution. Layer name indicates variable and
+#' resolution.
+#' @param variable vector(1). Vector containing the GMTED statistic first and
+#' the resolution second. (Example: variable = c("Breakline Emphasis",
+#' "7.5 arc-seconds")).
+#' @param directory_with_data character(1). Directory with downloaded GEOS-CF
+#' the "*_grd" folder containing .adf files.
+#' @author Mitchell Manware
+#' @return a SpatRaster object
+#' @importFrom terra rast
+#' @export
+import_gmted <- function(
+    variable = NULL,
+    directory_with_data = "../../data/covariates/gmted/") {
+  #### directory setup
+  directory_with_data <- download_sanitize_path(directory_with_data)
+  #### check for variable
+  check_for_null_parameters(mget(ls()))
+  #### check for length of variable
+  if (!(length(variable) == 2)) {
+    stop(
+      paste0(
+        "Please provide a vector with the statistic and resolution.\n"
+      )
+    )
+  }
+  #### identify statistic and resolution
+  statistic <- variable[1]
+  statistic_code <- gmted_codes(
+    statistic,
+    statistic = TRUE,
+    invert = FALSE
+  )
+  resolution <- variable[2]
+  resolution_code <- gmted_codes(
+    resolution,
+    resolution = TRUE,
+    invert = FALSE
+  )
+  cat(paste0(
+    "Cleaning ",
+    statistic,
+    " data at ",
+    resolution,
+    " resolution.\n"
+  ))
+  #### identify file path
+  paths <- list.files(
+    directory_with_data,
+    full.names = TRUE
+  )
+  #### select only the folder containing data
+  data_paths <- unique(
+    grep(
+      paste0(
+        statistic_code,
+        resolution_code,
+        "_grd",
+        collapse = "|"
+      ),
+      paths,
+      value = TRUE
+    )
+  )
+  data_path <- data_paths[endsWith(data_paths, "_grd")]
+  #### import data
+  data <- terra::rast(data_path)
+  #### set coordinate reference system
+  terra::crs(data) <- "ESPG:4326"
+  return(data)
+}
+
+#' @description
 #' Import and clean NOAA NCEP North American Regional Reanalysis (NARR) data
 #' downloaded with `download_narr` or `download_data(dataset_name = "NARR")`.
 #' Function returns a SpatRast object containing the user-defined variable
@@ -44,7 +120,9 @@ import_narr <- function(
     #### import data
     data_year <- terra::rast(data_paths[p])
     cat(paste0(
-      "Cleaning data for year ",
+      "Cleaning ",
+      variable,
+      " data for year ",
       substr(
         gsub(
           "-",
@@ -141,11 +219,10 @@ import_narr <- function(
 #' @export
 import_geos <-
   function(
-    date_start = "2018-01-01",
-    date_end = "2018-01-01",
-    variable = NULL,
-    directory_with_data = "../../data/covariates/geos_cf/"
-  ) {
+      date_start = "2018-01-01",
+      date_end = "2018-01-01",
+      variable = NULL,
+      directory_with_data = "../../data/covariates/geos_cf/") {
     #### directory setup
     directory_with_data <- download_sanitize_path(directory_with_data)
     #### check for variable
@@ -272,6 +349,8 @@ import_geos <-
         warn = FALSE
       )
     }
+    #### set coordinate refernce system
+    terra::crs(data_return) <- "EPSG:4326"
     cat(paste0(
       "Returning hourly ",
       variable,

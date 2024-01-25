@@ -70,7 +70,6 @@ import_gmted <- function(
   #### import data
   data <- terra::rast(data_path)
   #### set coordinate reference system
-  terra::crs(data) <- "ESPG:4326"
   return(data)
 }
 

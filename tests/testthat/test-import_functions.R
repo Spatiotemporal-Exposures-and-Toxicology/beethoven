@@ -2,14 +2,11 @@
 
 testthat::test_that("import_gmted returns expected.", {
   withr::local_package("terra")
-  # statistics <- c(
-  #   "Breakline Emphasis", "Systematic Subsample",
-  #   "Median Statistic", "Minimum Statistic",
-  #   "Mean Statistic", "Maximum Statistic",
-  #   "Standard Deviation Statistic"
-  # )
   statistics <- c(
-    "Breakline Emphasis", "Systematic Subsample"
+    "Breakline Emphasis", "Systematic Subsample",
+    "Median Statistic", "Minimum Statistic",
+    "Mean Statistic", "Maximum Statistic",
+    "Standard Deviation Statistic"
   )
   resolutions <- c(
     "7.5 arc-seconds", "15 arc-seconds", "30 arc-seconds"

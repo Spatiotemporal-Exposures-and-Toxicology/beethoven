@@ -2,12 +2,12 @@
 
 testthat::test_that("covar_gmted returns expected.", {
   withr::local_package("terra")
-  # statistics <- c(
-  #   "Breakline Emphasis", "Systematic Subsample",
-  #   "Median Statistic", "Minimum Statistic",
-  #   "Mean Statistic", "Maximum Statistic",
-  #   "Standard Deviation Statistic"
-  # )
+  statistics <- c(
+    "Breakline Emphasis", "Systematic Subsample",
+    "Median Statistic", "Minimum Statistic",
+    "Mean Statistic", "Maximum Statistic",
+    "Standard Deviation Statistic"
+  )
   statistics <- c(
     "Breakline Emphasis", "Systematic Subsample"
   )

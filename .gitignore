@@ -96,6 +96,7 @@ input/nlcd
 input/tri
 input/NCEP-NCAR-Reanalysis-1
 input/nei
+input/gmted
 
 # package spinoff test data
 tests/testdata/geos/

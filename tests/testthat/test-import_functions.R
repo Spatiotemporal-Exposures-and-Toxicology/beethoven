@@ -142,7 +142,7 @@ testthat::test_that("import_geos returns expected.", {
     )
     # expect non-null coordinate reference system
     expect_false(
-      is.null(terra::crs(geos))
+      terra::crs(geos) == ""
     )
     # expect lon and lat dimensions to be > 1
     expect_false(

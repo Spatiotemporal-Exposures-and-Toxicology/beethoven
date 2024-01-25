@@ -451,13 +451,7 @@ download_geos_cf_data <- function(
     sub_hyphen = TRUE
   )
   #### 6. define time sequence
-  collection_end <- substr(collection, nchar(collection), nchar(collection))
-  if (collection_end == "1") {
-    time_sequence <- seq(from = 30, to = 2330, by = 100)
-  } else if (collection_end == "3") {
-    time_sequence <- seq(from = 0, to = 2300, by = 100)
-  }
-  time_sequence <- sprintf("%04d", time_sequence)
+  time_sequence <- generate_time_sequence(collection)
   #### 7. define URL base
   base <- "https://portal.nccs.nasa.gov/datashare/gmao/geos-cf/v1/ana/"
   #### 8. initiate "..._wget_commands.txt" file

@@ -141,8 +141,8 @@ import_narr <- function(
 #' @export
 import_geos <-
   function(
-    date_start = "2023-09-01",
-    date_end = "2023-09-01",
+    date_start = "2018-01-01",
+    date_end = "2018-01-01",
     variable = NULL,
     directory_with_data = "../../data/covariates/geos_cf/"
   ) {
@@ -151,138 +151,142 @@ import_geos <-
     #### check for variable
     check_for_null_parameters(mget(ls()))
     #### identify file paths
-    data_paths <- list.files(
+    paths <- list.files(
       directory_with_data,
       pattern = "GEOS-CF.v01.rpl",
       full.names = TRUE
     )
-    data_paths <- data_paths[grep(
+    paths <- paths[grep(
       ".nc4",
-      data_paths
+      paths
     )]
-    #### identify collection
-    collection <- geos_collection(data_paths[1])
-    #### check for valid collection
-    if (!(collection %in% c(
-      "htf_inst_15mn_g1440x721_x1", "aqc_tavg_1hr_g1440x721_v1",
-      "chm_tavg_1hr_g1440x721_v1", "met_tavg_1hr_g1440x721_x1",
-      "xgc_tavg_1hr_g1440x721_x1", "chm_inst_1hr_g1440x721_p23",
-      "met_inst_1hr_g1440x721_p23"
-    ))) {
-      stop(
-        paste0(
-          "Unable to identify collection based on file names.\n"
-        )
-      )
-    }
-    #### define date sequence
-    date_sequence <- generate_date_sequence(
+    #### identify dates based on user input
+    dates_of_interest <- generate_date_sequence(
       date_start,
       date_end,
       sub_hyphen = TRUE
     )
-    #### define time sequence
-    time_sequence <- generate_time_sequence(collection)
+    #### subset file paths to only dates of interest
+    data_paths <- unique(
+      grep(
+        paste(
+          dates_of_interest,
+          collapse = "|"
+        ),
+        paths,
+        value = TRUE
+      )
+    )
+    #### identify collection
+    collection <- geos_strsplit(
+      data_paths[1],
+      collection = TRUE
+    )
+    cat(
+      paste0(
+        "Identified collection ",
+        collection,
+        ".\n"
+      )
+    )
     #### initiate for loop
     data_return <- terra::rast()
-    for (d in seq_along(date_sequence)) {
-      date <- date_sequence[d]
-      data_date <- terra::rast()
+    for (p in seq_along(data_paths)) {
+      #### import .nc4 data
+      data_raw <- terra::rast(data_paths[p])
+      data_datetime <- geos_strsplit(data_paths[p], datetime = TRUE)
       cat(paste0(
-        "Cleaning data for date ",
-        date,
+        "Cleaning ",
+        variable,
+        " data for ",
+        ISOdate(
+          year = substr(data_datetime, 1, 4),
+          month = substr(data_datetime, 5, 6),
+          day = substr(data_datetime, 7, 8),
+          hour = substr(
+            data_datetime,
+            9,
+            10
+          ),
+          min = substr(
+            data_datetime,
+            11,
+            12
+          ),
+          sec = 00,
+          tz = "UTC"
+        ),
         "...\n"
       ))
-      for (t in seq_along(time_sequence)) {
-        #### define path to hourly data
-        path <- paste0(
-          directory_with_data,
-          "/GEOS-CF.v01.rpl.",
-          collection,
-          ".",
-          date,
-          "_",
-          time_sequence[t],
-          "z.nc4"
+      #### subset to user-selected variable
+      data_variable <- terra::subset(
+        data_raw,
+        subset = grep(
+          variable,
+          names(data_raw)
         )
-        #### import .nc4 data
-        data_raw <- terra::rast(path)
-        #### subset to user-selected variable
-        data_variable <- terra::subset(
-          data_raw,
-          subset = grep(
-            variable,
-            names(data_raw)
+      )
+      #### define variable time
+      terra::time(data_variable) <- rep(
+        ISOdate(
+          year = substr(data_datetime, 1, 4),
+          month = substr(data_datetime, 5, 6),
+          day = substr(data_datetime, 7, 8),
+          hour = substr(
+            data_datetime,
+            9,
+            10
+          ),
+          min = substr(
+            data_datetime,
+            11,
+            12
+          ),
+          sec = 00,
+          tz = "UTC"
+        ),
+        terra::nlyr(data_variable)
+      )
+      #### define variable name based on date and time
+      names(data_variable) <- paste0(
+        names(data_variable),
+        "_",
+        gsub(
+          ":", "",
+          gsub(
+            "-", "",
+            gsub(" ", "_", terra::time(data_variable))
           )
         )
-        #### define variable time
-        terra::time(data_variable) <- rep(
-          ISOdate(
-            year = substr(date, 1, 4),
-            month = substr(date, 5, 6),
-            day = substr(date, 7, 8),
-            hour = substr(
-              time_sequence[t],
-              1,
-              2
-            ),
-            min = substr(
-              time_sequence[t],
-              3,
-              4
-            ),
-            sec = 00,
-            tz = "UTC"
-          ),
-          terra::nlyr(data_variable)
-        )
-        #### define variable name based on date and time
+      )
+      if (substr(data_datetime, 9, 12) == "0000") {
         names(data_variable) <- paste0(
           names(data_variable),
-          "_",
-          gsub(
-            ":", "",
-            gsub(
-              "-", "",
-              gsub(" ", "_", terra::time(data_variable))
-            )
-          )
-        )
-        if (t == 1 && substr(
-          collection,
-          nchar(collection),
-          nchar(collection)
-        ) == "3") {
-          names(data_variable) <- paste0(
-            names(data_variable),
-            "_",
-            time_sequence[t],
-            "00"
-          )
-        }
-        #### combine data with same date
-        data_date <- c(
-          data_date,
-          data_variable,
-          warn = FALSE
+          "_000000"
         )
       }
-      cat(paste0(
-        "Returning hourly ",
-        variable,
-        " data for date ",
-        date,
-        ".\n"
-      ))
-      #### set coordinate reference system
-      terra::crs(data_date) <- "EPSG:4326"
-      #### combine data in temporal range
+      #### combine data with same date
       data_return <- c(
         data_return,
-        data_date,
+        data_variable,
         warn = FALSE
       )
     }
+    cat(paste0(
+      "Returning hourly ",
+      variable,
+      " data from ",
+      as.Date(
+        dates_of_interest[1],
+        format = "%Y%m%d"
+      ),
+      " to ",
+      as.Date(
+        dates_of_interest[length(dates_of_interest)],
+        format = "%Y%m%d"
+      ),
+      ".\n"
+    ))
     #### return SpatRaster
     return(data_return)
   }

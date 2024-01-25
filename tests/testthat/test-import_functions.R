@@ -61,7 +61,6 @@ testthat::test_that("import_geos returns expected.", {
     "aqc_tavg_1hr_g1440x721_v1",
     "chm_inst_1hr_g1440x721_p23"
   )
-  daily <- FALSE
   # expect function
   expect_true(
     is.function(import_geos)
@@ -118,3 +117,75 @@ testthat::test_that("import_geos returns expected.", {
     }
   }
 })
+
+testthat::test_that("import_geos expected errors.", {
+  # expect error without variable
+  expect_error(
+    import_geos()
+  )
+  # expect error on directory without data
+  expect_error(
+    import_geos(
+      variable = "O3",
+      directory_with_data = "../../"
+    )
+  )
+})
+
+testthat::test_that("import support functions return expected.", {
+  path <- list.files(
+    "../testdata/geos/aqc_tavg_1hr_g1440x721_v1/",
+    full.names = TRUE
+    )
+  expect_error(
+    geos_strsplit(
+      path = path,
+      collection = TRUE,
+      date = TRUE,
+      datetime = TRUE
+    )
+  )
+  path_split_d <- geos_strsplit(
+    path = path,
+    date = TRUE
+  )
+  # expect YYYYMMDD dates
+  expect_true(
+    unique(nchar(path_split_d)) == 8
+  )
+  path_split_dt <- geos_strsplit(
+    path = path,
+    datetime = TRUE
+  )
+  # expect YYYYMMDD dates
+  expect_true(
+    unique(nchar(path_split_dt)) == 12
+  )
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

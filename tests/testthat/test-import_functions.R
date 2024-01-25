@@ -44,6 +44,17 @@ testthat::test_that("import_gmted returns expected.", {
   }
 })
 
+testthat::test_that("import_gmted returns error with non-vector variable.", {
+  expect_error(
+    gmted <-
+      import_gmted(
+        variable <- "Breakline Emphasis; 7.5 arc-seconds",
+        directory_with_data =
+          "../../../covariate_development/data/gmted"
+      )
+  )
+})
+
 testthat::test_that("import_narr returns expected.", {
   withr::local_package("terra")
   variables <- c(

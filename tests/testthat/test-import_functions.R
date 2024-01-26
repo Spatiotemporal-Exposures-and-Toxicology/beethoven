@@ -1,5 +1,40 @@
 # Tests for data import functions
 
+testthat::test_that("import_hms returns expected.", {
+  withr::local_package("terra")
+  densities <- c(
+    "Light",
+    "Medium",
+    "Heavy"
+  )
+  for (d in seq_along(densities)) {
+    hms <-
+      import_hms(
+        date_start = "2018-12-30",
+        date_end = "2019-01-01",
+        variable = densities[d],
+        directory_with_data =
+          "../../../covariate_development/data/noaa/"
+      )
+    # expect output is a SpatVector
+    expect_true(
+      class(hms)[1] == "SpatVector"
+    )
+    # expect non-null coordinate reference system
+    expect_false(
+      is.null(terra::crs(hms))
+    )
+    # expect two columns
+    expect_true(
+      ncol(hms) == 2
+    )
+    # expect density and date column
+    expect_true(
+      all(c("Density", "Date") %in% names(hms))
+    )
+  }
+})
+
 testthat::test_that("import_gmted returns expected.", {
   withr::local_package("terra")
   statistics <- c(

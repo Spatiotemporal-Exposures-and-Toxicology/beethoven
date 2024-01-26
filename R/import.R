@@ -1,4 +1,140 @@
 #' @description
+#' Import and clean wildfire smoke plume coverage data from NOAA Hazard
+#' Mapping System Fire and Smoke Product.
+#' @param date_start character(1). length of 10. Start date of downloaded data.
+#' Format YYYY-MM-DD (ex. September 1, 2023 = "2023-09-01").
+#' @param date_end character(1). length of 10. End date of downloaded data.
+#' Format YYYY-MM-DD (ex. September 10, 2023 = "2023-09-10").
+#' @param variable character(1). "Light", "Medium", or "Heavy".
+#' @param directory_with_data character(1). Directory with downloaded NOAA HMS
+#' data files.
+#' @author Mitchell Manware.
+#' @return a SpatVector object;
+#' @importFrom terra vect
+#' @importFrom terra aggregate
+#' @importFrom terra subset
+#' @export
+import_hms <- function(
+    date_start = "2018-01-01",
+    date_end = "2018-01-01",
+    variable = c("Light", "Medium", "Heavy"),
+    directory_with_data = "./input/noaa_hms/raw/") {
+  #### directory setup
+  directory_with_data <- download_sanitize_path(directory_with_data)
+  #### check for variable
+  check_for_null_parameters(mget(ls()))
+  #### identify file paths
+  paths <- list.files(
+    directory_with_data,
+    pattern = "hms_smoke",
+    full.names = TRUE
+  )
+  paths <- paths[grep(
+    ".shp",
+    paths
+  )]
+  #### identify dates based on user input
+  dates_of_interest <- generate_date_sequence(
+    date_start,
+    date_end,
+    sub_hyphen = TRUE
+  )
+  #### subset file paths to only dates of interest
+  data_paths <- unique(
+    grep(
+      paste(
+        dates_of_interest,
+        collapse = "|"
+      ),
+      paths,
+      value = TRUE
+    )
+  )
+  #### process data
+  data <- terra::vect()
+  for (d in seq_along(data_paths)) {
+    data_date <- terra::vect(data_paths[d])
+    date <- as.Date(
+      substr(
+        data_date$Start[1],
+        1,
+        7
+      ),
+      format = "%Y%j"
+    )
+    cat(paste0(
+      "Cleaning ",
+      variable,
+      " data for date ",
+      date,
+      "...\n"
+    ))
+    data_date_p <- terra::project(data_date, "EPSG:4326")
+    #### absent polygons (ie. December 31, 2018)
+    if (nrow(data_date_p) == 0) {
+      cat(paste0(
+        "Smoke plume polygons absent for date ",
+        as.Date(
+          dates_of_interest[d],
+          format = "%Y%m%d"
+        ),
+        ". Returning empty SpatVector.\n"
+      ))
+      data_missing <- data_date_p
+      data_missing$Density <- ""
+      data_missing$Date <- ""
+      data_return <- rbind(data, data_missing)
+    } else {
+      #### zero buffer to avoid self-intersecting geometry error
+      data_date_b <- terra::buffer(
+        data_date_p,
+        width = 0
+      )
+      #### aggregate density-specific polygons
+      data_date_aggregate <- terra::aggregate(
+        data_date_b,
+        by = "Density",
+        dissolve = TRUE
+      )
+      #### factorize
+      data_date_aggregate$Density <- factor(
+        data_date_aggregate$Density,
+        levels = c("Light", "Medium", "Heavy")
+      )
+      data_date_aggregate$Date <- paste0(
+        gsub(
+          "-",
+          "",
+          date
+        )
+      )
+      data <- rbind(data, data_date_aggregate)
+    }
+  }
+  #### select "Density" and "Date"
+  data <- data[seq_len(nrow(data)), c("Density", "Date")]
+  #### subset to density level
+  data_return <- data[data$Density == variable, ]
+  cat(paste0(
+    "Returning daily ",
+    variable,
+    " data from ",
+    as.Date(
+      dates_of_interest[1],
+      format = "%Y%m%d"
+    ),
+    " to ",
+    as.Date(
+      dates_of_interest[length(dates_of_interest)],
+      format = "%Y%m%d"
+    ),
+    ".\n"
+  ))
+  #### return SpatVector
+  return(data_return)
+}
+
+#' @description
 #' Import and clean Global Multi-resolution Terrain Elevation Data (GMTED2010)
 #' downloaded with `download_gmted` or `download_data(dataset_name = "gmted")`.
 #' Function returns a SpatRast object containing the user-defined variable

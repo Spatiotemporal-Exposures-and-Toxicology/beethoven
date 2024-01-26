@@ -1,5 +1,51 @@
 # Tests for covariate generation functions
 
+testthat::test_that("import_hms returns expected.", {
+  withr::local_package("terra")
+  densities <- c(
+    "Light",
+    "Medium",
+    "Heavy"
+  )
+  # expect function
+  expect_true(
+    is.function(covar_hms)
+  )
+  for (d in seq_along(densities)) {
+    density <- densities[d]
+    for (b in seq_along(buffers)) {
+      hms <-
+        import_hms(
+          date_start = "2018-12-30",
+          date_end = "2019-01-01",
+          variable = density,
+          directory_with_data =
+            "../../../covariate_development/data/noaa/"
+        )
+      hms_covar <-
+        covar_hms(
+          data = gmted,
+          sites = sites,
+          identifier = "site_id",
+          buffer = buffers[b],
+          fun = "mean"
+        )
+      # expect output is data.frame
+      expect_true(
+        class(hms_covar) == "data.frame"
+      )
+      # expect 4 columns
+      expect_true(
+        ncol(hms_covar) == 2
+      )
+      # expect numeric value
+      expect_true(
+        class(hms_covar[, 2]) == "integer"
+      )
+    }
+  }
+})
+
 testthat::test_that("covar_gmted returns expected.", {
   withr::local_package("terra")
   statistics <- c(

@@ -1,4 +1,189 @@
 #' @description
+#' Extract wildfire smoke plume coverage data from NOAA Hazard Mapping Fire and
+#' Smoke Product at point locations using SpatVector object from `import_hms`.
+#' Function returns a data frame containing wildfire smoke plume binary values
+#' (0 = smoke absent; 1 = smoke present) at user-defined sites. Unique columns
+#' reflect smoke density and circular buffer.
+#' @param data SpatVector(1). Cleaned SpatVector object that has been returned
+#' from `import_hms` containing wildfire smoke plume coverage data.
+#' @param sites data.frame, characater to file path, SpatVector, or sf object.
+#' @param identifier character(1). Column within `locations` CSV file
+#' containing identifier for each unique coordinate location.
+#' @param buffer integer(1). Circular buffer distance around site locations.
+#' (Default = 0).
+#' @author Mitchell Manware
+#' @return a data.frame object;
+#' @importFrom terra vect
+#' @importFrom terra as.data.frame
+#' @importFrom terra time
+#' @importFrom terra extract
+#' @importFrom terra nlyr
+#' @importFrom terra crs
+#' @export
+covar_hms <- function(
+    data,
+    sites,
+    identifier = NULL,
+    buffer = 0) {
+  #### check for null parameters
+  check_for_null_parameters(mget(ls()))
+  #### data == character indicates no wildfire smoke polumes are present
+  #### return 0 for all sites and dates
+  if (class(data) == "character") {
+    cat(paste0(
+      "Inherited list of dates due to absent smoke plume polygons.\n"
+    ))
+    skip_extraction <- NULL
+    skip_variable <- data[1]
+    skip_dates <- data[2:length(data)]
+    skip_sites_id <- data.frame(sites[, identifier])
+    for (s in seq_along(skip_dates)) {
+      skip_extraction_date <- cbind(
+        skip_sites_id,
+        as.Date(
+          skip_dates[s],
+          format = "%Y%m%d"
+        ),
+        0
+      )
+      colnames(skip_extraction_date) <- c(
+        identifier,
+        "date",
+        paste0(
+          skip_variable,
+          "_",
+          buffer
+        )
+      )
+      skip_extraction <- rbind(
+        skip_extraction,
+        skip_extraction_date
+      )
+      cat(paste0(
+        "Returning ",
+        skip_variable,
+        " covariates.\n"
+      ))
+    }
+    return(skip_extraction)
+  }
+  #### prepare sites
+  sites_e <- sites_vector(
+    sites,
+    terra::crs(data),
+    buffer
+  )
+  #### site identifiers only
+  sites_id <- subset(
+    terra::as.data.frame(sites_e),
+    select = identifier
+  )
+  #### generate date sequence for missing polygon patch
+  date_sequence <- generate_date_sequence(
+    date_start = as.Date(
+      data$Date[1],
+      format = "%Y%m%d"
+    ),
+    date_end = as.Date(
+      data$Date[nrow(data)],
+      format = "%Y%m%d"
+    ),
+    sub_hyphen = TRUE
+  )
+  #### empty location data.frame
+  sites_extracted <- NULL
+  for (r in seq_len(nrow(data))) {
+    #### select data layer
+    data_layer <- data[r]
+    layer_date <- as.Date(
+      data_layer$Date,
+      format = "%Y%m%d"
+    )
+    layer_name <- data_layer$Density
+    cat(paste0(
+      "Calculating daily ",
+      as.character(
+        layer_name
+      ),
+      " covariates for date ",
+      layer_date,
+      "...\n"
+    ))
+    #### extract layer data at sites
+    sites_extracted_layer <- as.integer(
+      terra::relate(
+        sites_v,
+        data_layer,
+        "intersects"
+      )
+    )
+    #### merge with site_id and date
+    sites_extracted_layer <- cbind(
+      sites_id,
+      layer_date,
+      sites_extracted_layer
+    )
+    #### define column names
+    colnames(sites_extracted_layer) <- c(
+      identifier,
+      "date",
+      paste0(
+        tolower(
+          layer_name
+        ),
+        "_",
+        buffer
+      )
+    )
+    #### merge with empty sites_extracted
+    sites_extracted <- rbind(
+      sites_extracted,
+      sites_extracted_layer
+    )
+  }
+  #### check for missing dates (missing polygons)
+  if (!(identical(date_sequence, data$Date))) {
+    cat(paste0(
+      "Detected absent smoke plume polygons.\n"
+    ))
+    missing_dates <- date_sequence[
+      which(!(date_sequence %in% data$Date))
+    ]
+    ###
+    for (m in seq_along(missing_dates)) {
+      missing_date <- as.Date(
+        missing_dates[m],
+        format = "%Y%m%d"
+      )
+      cat(paste0(
+        "Smoke plume polygons absent for date ",
+        missing_date,
+        ". Returning 0 (smoke plumes absent).\n"
+      ))
+      missing_data <- cbind(
+        sites_id,
+        missing_date,
+        0
+      )
+      colnames(missing_data) <- colnames(sites_extracted)
+      sites_extracted <- rbind(
+        sites_extracted,
+        missing_data
+      )
+    }
+  }
+  #### order by date
+  sites_extracted_ordered <- sites_extracted[order(sites_extracted$date), ]
+  cat(paste0(
+    "Returning ",
+    layer_name,
+    " covariates.\n"
+  ))
+  #### return data.frame
+  return(sites_extracted_ordered)
+}
+
+#' @description
 #' Extract Global Multi-resolution Terrain Elevation Data (GMTED2010) data at
 #' point locations using SpatRaster object from `import_gmted`. Function returns
 #' a data frame containing GEOS-CF variable values at user-defined sites. Unique
@@ -111,6 +296,7 @@ covar_gmted <- function(
       buffer
     )
   )
+  #### return data.frame
   return(sites_extracted)
 }
 
@@ -184,6 +370,7 @@ covar_narr <- function(
         layer_date,
         "...\n"
       ))
+      #### pressure level data
     } else if (length(data_name) == 3) {
       layer_level <- data_name[2]
       layer_date <- as.Date(

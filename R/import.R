@@ -115,23 +115,42 @@ import_hms <- function(
   data <- data[seq_len(nrow(data)), c("Density", "Date")]
   #### subset to density level
   data_return <- data[data$Density == variable, ]
-  cat(paste0(
-    "Returning daily ",
-    variable,
-    " data from ",
-    as.Date(
-      dates_of_interest[1],
-      format = "%Y%m%d"
-    ),
-    " to ",
-    as.Date(
-      dates_of_interest[length(dates_of_interest)],
-      format = "%Y%m%d"
-    ),
-    ".\n"
-  ))
-  #### return SpatVector
-  return(data_return)
+  #### if no polygons
+  if (nrow(data_return) == 0) {
+    cat(paste0(
+      variable,
+      " density smoke plume polygons absent from ",
+      as.Date(
+        dates_of_interest[1],
+        format = "%Y%m%d"
+      ),
+      " to ",
+      as.Date(
+        dates_of_interest[length(dates_of_interest)],
+        format = "%Y%m%d"
+      ),
+      ". Returning vector of dates.\n"
+    ))
+    return(c(variable, dates_of_interest))
+  } else if (nrow(data) > 0 && !(terra::geomtype(data) == "none")) {
+    cat(paste0(
+      "Returning daily ",
+      variable,
+      " data from ",
+      as.Date(
+        dates_of_interest[1],
+        format = "%Y%m%d"
+      ),
+      " to ",
+      as.Date(
+        dates_of_interest[length(dates_of_interest)],
+        format = "%Y%m%d"
+      ),
+      ".\n"
+    ))
+    #### return SpatVector
+    return(data_return)
+  }
 }
 
 #' @description
@@ -353,11 +372,10 @@ import_narr <- function(
 #' @importFrom terra subset
 #' @export
 import_geos <-
-  function(
-      date_start = "2018-01-01",
-      date_end = "2018-01-01",
-      variable = NULL,
-      directory_with_data = "../../data/covariates/geos_cf/") {
+  function(date_start = "2018-01-01",
+           date_end = "2018-01-01",
+           variable = NULL,
+           directory_with_data = "../../data/covariates/geos_cf/") {
     #### directory setup
     directory_with_data <- download_sanitize_path(directory_with_data)
     #### check for variable

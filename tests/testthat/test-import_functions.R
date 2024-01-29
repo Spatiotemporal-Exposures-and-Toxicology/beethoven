@@ -14,24 +14,35 @@ testthat::test_that("import_hms returns expected.", {
         date_end = "2019-01-01",
         variable = densities[d],
         directory_with_data =
-          "../../../covariate_development/data/noaa/"
+        "../../../covariate_development/data/noaa/"
       )
-    # expect output is a SpatVector
+    # expect output is a SpatVector or character
     expect_true(
-      class(hms)[1] == "SpatVector"
+      class(hms)[1] %in% c("SpatVector", "character")
     )
-    # expect non-null coordinate reference system
-    expect_false(
-      is.null(terra::crs(hms))
-    )
-    # expect two columns
-    expect_true(
-      ncol(hms) == 2
-    )
-    # expect density and date column
-    expect_true(
-      all(c("Density", "Date") %in% names(hms))
-    )
+    if (class(hms)[1] == "SpatVector") {
+      # expect non-null coordinate reference system
+      expect_false(
+        is.null(terra::crs(hms))
+      )
+      # expect two columns
+      expect_true(
+        ncol(hms) == 2
+      )
+      # expect density and date column
+      expect_true(
+        all(c("Density", "Date") %in% names(hms))
+      )
+    } else if (class(hms)[1] == "character") {
+      # expect first is density type
+      expect_true(
+        hms[1] %in% c("Light", "Medium", "Heavy")
+      )
+      # expect other elements are 8 character dates
+      expect_true(
+        all(nchar(hms[2:length(hms)]) == 8)
+      )
+    }
   }
 })
 
@@ -82,7 +93,7 @@ testthat::test_that("import_gmted returns error with non-vector variable.", {
       import_gmted(
         variable <- "Breakline Emphasis; 7.5 arc-seconds",
         directory_with_data =
-          "../../../covariate_development/data/gmted"
+        "../../../covariate_development/data/gmted"
       )
   )
 })

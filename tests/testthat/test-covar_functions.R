@@ -7,6 +7,7 @@ testthat::test_that("import_hms returns expected.", {
     "Medium",
     "Heavy"
   )
+  buffers <- c(0, 1000)
   # expect function
   expect_true(
     is.function(covar_hms)
@@ -20,27 +21,34 @@ testthat::test_that("import_hms returns expected.", {
           date_end = "2019-01-01",
           variable = density,
           directory_with_data =
-            "../../../covariate_development/data/noaa/"
+          "../../../covariate_development/data/noaa/"
         )
       hms_covar <-
         covar_hms(
-          data = gmted,
+          data = hms,
           sites = sites,
           identifier = "site_id",
-          buffer = buffers[b],
-          fun = "mean"
+          buffer = buffers[b]
         )
       # expect output is data.frame
       expect_true(
         class(hms_covar) == "data.frame"
       )
-      # expect 4 columns
+      # expect 3 columns
       expect_true(
-        ncol(hms_covar) == 2
+        ncol(hms_covar) == 3
+      )
+      # expect 9 rows
+      expect_true(
+        nrow(hms_covar) == 9
       )
       # expect numeric value
       expect_true(
-        class(hms_covar[, 2]) == "integer"
+        class(hms_covar[, 3]) == "numeric"
+      )
+      # expect binary
+      expect_true(
+        all(unique(hms_covar[, 3]) %in% c(0, 1))
       )
     }
   }
@@ -90,7 +98,7 @@ testthat::test_that("covar_gmted returns expected.", {
         expect_true(
           class(gmted_covar) == "data.frame"
         )
-        # expect 4 columns
+        # expect 2 columns
         expect_true(
           ncol(gmted_covar) == 2
         )

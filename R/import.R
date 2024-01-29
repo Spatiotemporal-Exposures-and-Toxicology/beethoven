@@ -14,7 +14,7 @@
 #' @importFrom terra aggregate
 #' @importFrom terra subset
 #' @export
-import_hms <- function(
+import_hms_explore <- function(
     date_start = "2018-01-01",
     date_end = "2018-01-01",
     variable = c("Light", "Medium", "Heavy"),
@@ -51,75 +51,78 @@ import_hms <- function(
     )
   )
   #### process data
-  data <- terra::vect()
+  data_return <- terra::vect()
   for (d in seq_along(data_paths)) {
     data_date <- terra::vect(data_paths[d])
-    date <- as.Date(
-      substr(
-        data_date$Start[1],
-        1,
-        7
-      ),
-      format = "%Y%j"
+    data_date_p <- terra::project(
+      data_date,
+      "EPSG:4326"
     )
-    cat(paste0(
-      "Cleaning ",
-      variable,
-      " data for date ",
-      date,
-      "...\n"
-    ))
-    data_date_p <- terra::project(data_date, "EPSG:4326")
+    #### subset to density of interest
+    data_density <- data_date_p[data_date_p$Density == variable]
     #### absent polygons (ie. December 31, 2018)
-    if (nrow(data_date_p) == 0) {
+    if (nrow(data_density) == 0) {
       cat(paste0(
-        "Smoke plume polygons absent for date ",
+        variable,
+        " smoke plume polygons absent for date ",
         as.Date(
           dates_of_interest[d],
           format = "%Y%m%d"
         ),
         ". Returning empty SpatVector.\n"
       ))
-      data_missing <- data_date_p
+      data_missing <- data_density
       data_missing$Density <- ""
       data_missing$Date <- ""
-      data_return <- rbind(data, data_missing)
+      data_return <- rbind(data_return, data_missing)
     } else {
-      #### zero buffer to avoid self-intersecting geometry error
-      data_date_b <- terra::buffer(
-        data_date_p,
+      date <- as.Date(
+        substr(
+          data_density$Start[1],
+          1,
+          7
+        ),
+        format = "%Y%j"
+      )
+      cat(paste0(
+        "Cleaning ",
+        tolower(variable),
+        " data for date ",
+        date,
+        "...\n"
+      ))
+      #### zero buffer to avoid self intersection
+      data_0_buffer <- terra::buffer(
+        data_density,
         width = 0
       )
-      #### aggregate density-specific polygons
-      data_date_aggregate <- terra::aggregate(
-        data_date_b,
+      #### aggregate polygons
+      data_aggregate <- terra::aggregate(
+        data_0_buffer,
         by = "Density",
         dissolve = TRUE
       )
       #### factorize
-      data_date_aggregate$Density <- factor(
-        data_date_aggregate$Density,
-        levels = c("Light", "Medium", "Heavy")
-      )
-      data_date_aggregate$Date <- paste0(
+      data_aggregate$Date <- paste0(
         gsub(
           "-",
           "",
           date
         )
       )
-      data <- rbind(data, data_date_aggregate)
+      #### select "Density" and "Date"
+      data_aggregate <- data_aggregate[
+        seq_len(nrow(data_aggregate)), c("Density", "Date")
+      ]
+      #### merge with other data
+      data_return <- rbind(data_return, data_aggregate) 
     }
   }
-  #### select "Density" and "Date"
-  data <- data[seq_len(nrow(data)), c("Density", "Date")]
-  #### subset to density level
-  data_return <- data[data$Density == variable, ]
   #### if no polygons
   if (nrow(data_return) == 0) {
     cat(paste0(
       variable,
-      " density smoke plume polygons absent from ",
+      " smoke plume polygons absent from ",
       as.Date(
         dates_of_interest[1],
         format = "%Y%m%d"
@@ -132,10 +135,10 @@ import_hms <- function(
       ". Returning vector of dates.\n"
     ))
     return(c(variable, dates_of_interest))
-  } else if (nrow(data) > 0 && !(terra::geomtype(data) == "none")) {
+  } else if (nrow(data_return) > 0) {
     cat(paste0(
       "Returning daily ",
-      variable,
+      tolower(variable),
       " data from ",
       as.Date(
         dates_of_interest[1],

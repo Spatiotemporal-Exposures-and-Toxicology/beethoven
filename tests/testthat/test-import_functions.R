@@ -9,7 +9,7 @@ testthat::test_that("import_hms returns expected.", {
   )
   for (d in seq_along(densities)) {
     hms <-
-      import_hms(
+      import_hms_explore(
         date_start = "2018-12-30",
         date_end = "2019-01-01",
         variable = densities[d],

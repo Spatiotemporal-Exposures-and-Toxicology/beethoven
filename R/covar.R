@@ -36,7 +36,7 @@ covar_hms <- function(
     skip_extraction <- NULL
     skip_variable <- data[1]
     skip_dates <- data[2:length(data)]
-    skip_sites_id <- data.frame(sites[, identifier])
+    skip_sites_id <- data.frame(data.frame(sites)[, identifier])
     for (s in seq_along(skip_dates)) {
       skip_extraction_date <- cbind(
         skip_sites_id,
@@ -59,12 +59,12 @@ covar_hms <- function(
         skip_extraction,
         skip_extraction_date
       )
-      cat(paste0(
-        "Returning ",
-        skip_variable,
-        " covariates.\n"
-      ))
     }
+    cat(paste0(
+      "Returning ",
+      tolower(skip_variable),
+      " smoke plume covariates.\n"
+    ))
     return(skip_extraction)
   }
   #### prepare sites

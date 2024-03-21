@@ -1,0 +1,32 @@
+---
+title: "XGBoost data creation"
+format: html
+editor: visual
+authors: Anisha Singh and Eva Marques
+---
+
+## Open data 
+
+To delete:
+
+```{r}
+test <- readRDS("../output/NRTAP_Covars_Koppen_Geiger_AE_binary.rds")
+test2 <- readRDS("../output/NRTAP_Covars_GEOS.rds")
+
+head(test2)
+```
+
+Function in progress:
+
+```{r}
+files <- list.files("../output/",
+                    pattern = "NRTAP_Covars_",
+                    full.names = TRUE)
+for (f in files) {
+  df <- readRDS(f)
+  if ("time" %in% colnames(df)){
+    cat("todo")
+  }
+}
+
+```

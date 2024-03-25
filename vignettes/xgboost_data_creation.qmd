@@ -11,22 +11,82 @@ To delete:
 
 ```{r}
 test <- readRDS("../output/NRTAP_Covars_Koppen_Geiger_AE_binary.rds")
-test2 <- readRDS("../output/NRTAP_Covars_GEOS.rds")
 
-head(test2)
+test1 <- readRDS("../output/NRTAP_Covars_Koppen_Geiger_AE_binary.rds")
+test2 <- readRDS("../output/NRTAP_Covars_Ecoregion.rds")
+test3 <- readRDS("../output/NRTAP_Covars_GMTED.rds")
+test4 <- readRDS("../output/NRTAP_Covars_NLCD_new.rds")
+test5 <- readRDS("../output/NRTAP_Covars_SEDAC_Pop.rds")
+test6 <- readRDS("../output/NRTAP_Covars_SEDAC_Groads.rds")
+test7 <- readRDS("../output/NRTAP_Covars_NEI_new.rds")
+test8 <- readRDS("../output/NRTAP_Covars_TRI_new.rds")
+
+
+test9 <- readRDS("../output/NRTAP_Covars_MOD06L2_2018_2022_new.rds")
+
+```
+
+```{r}
+testa <- merge(test1, test2, by = c("site_id"))
+testb <- merge(test1, test7, by = c("site_id"))
 ```
 
 Function in progress:
 
 ```{r}
+double_to_site_id <- function(x) {
+  ndigit <- floor(log10(x)) + 1
+  stopifnot("too many digits" = ndigit <= 14)
+  if (ndigit < 14) {
+    return(paste0(paste(replicate(14 - ndigit, "0"), collapse = ""),
+                 as.character(x)))
+  }
+  else {
+    return(as.character(x))
+  } 
+}
+
 files <- list.files("../output/",
                     pattern = "NRTAP_Covars_",
                     full.names = TRUE)
 for (f in files) {
   df <- readRDS(f)
+  if (typeof(df$site_id) == "double") {
+    df$site_id <- lapply(df$site_id,
+                         FUN = function(x) { double_to_site_id(x) })
+  }
+  df$site_id <- as.character(df$site_id)
   if ("time" %in% colnames(df)){
-    cat("todo")
+    if (!exists("df_st")) {
+      cat("spatio-temporal ", f, "\n")
+      df_st <- df
+    } else {
+      df_st <- merge(df_st, df, by = c("site_id", "time"))
+    }
+  } else if ("year" %in% colnames(df)) {
+    if (!exists("df_y")) {
+      cat("yearly ", f, "\n")
+      df_y <- df
+    } else {
+      df_y <- merge(df_y, df, by = c("site_id", "year"))
+    }
+  }
+  else {
+    if (!exists("df_s")) {
+      cat("spatial ", f, "\n")
+      df_s <- df
+    } else {
+      df_s <- merge(df_s, df, by = c("site_id"))
+    }
   }
 }
 
+```
+
+Save sensors with concatenated covariates
+
+```{r}
+saveRDS(object = df_st, file = "../output/xgboost_data_spatiotemporal.rds")
+saveRDS(object = df_s, file = "../output/xgboost_data_spatial.rds")
+saveRDS(object = df_y, file = "../output/xgboost_data_yearly.rds")
 ```
